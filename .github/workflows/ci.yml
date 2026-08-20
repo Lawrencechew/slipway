@@ -21,7 +21,7 @@ jobs:
         options: >-
           --health-cmd "pg_isready -U pavedpath" --health-interval 10s --health-timeout 5s --health-retries 5
     env:
-      DATABASE_URL: postgresql://pavedpath:pavedpath@localhost:5432/pavedpath
+      DATABASE_URL: postgresql+psycopg://pavedpath:pavedpath@localhost:5432/pavedpath
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python
