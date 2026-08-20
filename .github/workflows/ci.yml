@@ -13,15 +13,15 @@ jobs:
       postgres:
         image: postgres:15
         env:
-          POSTGRES_USER: pavedpath
-          POSTGRES_PASSWORD: pavedpath
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
           POSTGRES_DB: pavedpath
         ports:
           - 5432:5432
         options: >-
           --health-cmd "pg_isready -U pavedpath" --health-interval 10s --health-timeout 5s --health-retries 5
     env:
-      DATABASE_URL: postgresql+psycopg://pavedpath:pavedpath@localhost:5432/pavedpath
+      DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/pavedpath
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python
