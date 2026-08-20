@@ -14,8 +14,9 @@ def make_spec():
             "deployment": {"environment": "production", "replicas": 3},
             "resources": {"limits": {"cpu": "500m", "memory": "512Mi"}},
             "observability": {"metrics": True, "tracing": True},
-            "containers": [{"name": "app", "securityContext": {"runAsNonRoot": True}}],
-            "secrets": ["DATABASE_URL"],
+                "containers": [{"name": "app", "securityContext": {"runAsNonRoot": True}, "readinessProbe": {"httpGet": {"path": "/health"}}, "livenessProbe": {"httpGet": {"path": "/health"}} }],
+                "secrets": ["DATABASE_URL"],
+                "podDisruptionBudget": {"minAvailable": 1},
             "slo": {"availability": 99.9},
         },
     )
