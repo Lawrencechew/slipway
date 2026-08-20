@@ -1,11 +1,11 @@
 import json
-from starlette.testclient import TestClient
+from httpx import Client as HTTPXClient
 from app.main import app
 from app.db import engine, Base
 from app import models
 
 
-client = TestClient(app)
+client = HTTPXClient(app=app, base_url="http://testserver")
 
 
 def setup_module(module):
