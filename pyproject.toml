@@ -4,6 +4,9 @@ version = "0.1.0"
 description = "PavedPath — Git-native golden-path platform for Azure/AKS (v1)"
 authors = ["Lawrence Chew <lawrence.chew@example.com>"]
 
+# Let Poetry find the package directory
+packages = [ { include = "app" } ]
+
 [tool.poetry.dependencies]
 python = "^3.13"
 fastapi = "^0.97.0"
