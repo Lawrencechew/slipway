@@ -12,7 +12,13 @@ from app import models
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
-fileConfig(config.config_file_name)
+# Alembic's ini may not include logging sections in CI; guard fileConfig
+if config.config_file_name and os.path.exists(config.config_file_name):
+    try:
+        fileConfig(config.config_file_name)
+    except Exception:
+        # ignore logging config errors (missing [formatters] etc.)
+        pass
 
 # set sqlalchemy.url from env if provided
 if 'DATABASE_URL' in os.environ:
