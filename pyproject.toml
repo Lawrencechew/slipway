@@ -15,6 +15,7 @@ pydantic = "^1.10.10"
 sqlalchemy = "^2.0"
 alembic = "^1.11.1"
 psycopg = "^3.2"
+httpx = "<0.28"
 
 [tool.poetry.dev-dependencies]
 pytest = "^7.4"

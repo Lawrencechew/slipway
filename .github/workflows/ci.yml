@@ -19,7 +19,7 @@ jobs:
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U pavedpath" --health-interval 10s --health-timeout 5s --health-retries 5
+          --health-cmd "pg_isready -U postgres" --health-interval 10s --health-timeout 5s --health-retries 5
     env:
       DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/pavedpath
     steps:
@@ -34,6 +34,18 @@ jobs:
           pip install poetry
           poetry config virtualenvs.create false
           poetry install --no-interaction --no-ansi
+      - name: Show installed package versions
+        run: |
+          python - <<'PY'
+import importlib
+pkgs = ['fastapi','starlette','httpx','anyio','pytest']
+for p in pkgs:
+    try:
+        m = importlib.import_module(p)
+        print(f"{p}=={getattr(m,'__version__',m)}")
+    except Exception as e:
+        print(f"{p} not installed: {e}")
+PY
       - name: Run migrations
         run: |
           alembic upgrade head
