@@ -6,3 +6,24 @@ dist/
 .pytest_cache/
 node_modules/
 /.venv/
+
+# Editor and OS
+.DS_Store
+.vscode/
+.idea/
+
+# Python
+.mypy_cache/
+.ruff_cache/
+
+# Frontend build outputs
+frontend/dist/
+frontend/node_modules/
+
+# Coverage
+coverage/
+.coverage
+
+# Logs
+*.log
+pavedpath.db

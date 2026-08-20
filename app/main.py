@@ -9,7 +9,11 @@ from .auth import get_current_user, create_user
 from typing import Dict
 import uvicorn
 
-app = FastAPI(title="PavedPath API")
+app = FastAPI(
+    title="PavedPath",
+    description="PavedPath converts a typed ServiceSpec into a policy-validated, deterministic Plan that can be reviewed, approved, audited and handed off to Git for CI/CD.",
+    version="0.1.0",
+)
 
 app.add_middleware(
     CORSMiddleware,
