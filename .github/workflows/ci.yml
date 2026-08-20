@@ -20,12 +20,14 @@ jobs:
           - 5432:5432
         options: >-
           --health-cmd "pg_isready -U pavedpath" --health-interval 10s --health-timeout 5s --health-retries 5
+    env:
+      DATABASE_URL: postgresql://pavedpath:pavedpath@localhost:5432/pavedpath
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
+          python-version: '3.13'
       - name: Install deps
         run: |
           python -m pip install --upgrade pip
@@ -35,8 +37,7 @@ jobs:
       - name: Run migrations
         run: |
           alembic upgrade head
-        env:
-          DATABASE_URL: postgresql://pavedpath:pavedpath@localhost:5432/pavedpath
+      
       - name: Run tests
         run: |
           pytest -q

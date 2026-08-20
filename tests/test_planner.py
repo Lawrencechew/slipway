@@ -10,7 +10,8 @@ def sample_spec():
             "deployment": {"environment": "production", "replicas": 2},
             "resources": {"limits": {"cpu": "250m", "memory": "256Mi"}},
             "observability": {"metrics": True},
-            "containers": [{"name": "app", "securityContext": {"runAsNonRoot": True}}],
+            "containers": [{"name": "app", "securityContext": {"runAsNonRoot": True}, "readinessProbe": {"httpGet": {"path": "/health"}}, "livenessProbe": {"httpGet": {"path": "/health"}} }],
+            "podDisruptionBudget": {"minAvailable": 1},
         },
     )
 
@@ -22,4 +23,4 @@ def test_fingerprint_and_plan():
     plan = create_plan(spec)
     assert plan.spec_fingerprint == fp
     assert plan.status == "READY"
-    assert "orders-api/Dockerfile" in plan.artifacts
+    assert any(a.get('path') == 'orders-api/Dockerfile' for a in plan.artifacts)

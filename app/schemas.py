@@ -1,11 +1,11 @@
 from pydantic import BaseModel, Field
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 
 
 class Metadata(BaseModel):
     name: str
-    owner: Optional[str]
-    description: Optional[str]
+    owner: Optional[str] = None
+    description: Optional[str] = None
 
 
 class Runtime(BaseModel):
@@ -65,4 +65,4 @@ class Plan(BaseModel):
     created: str
     status: str
     policy_results: List[PolicyResult] = []
-    artifacts: dict = {}
+    artifacts: List[Dict[str, Any]] = []

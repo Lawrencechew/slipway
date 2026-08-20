@@ -31,6 +31,31 @@ def evaluate_policies(spec: ServiceSpec) -> List[PolicyResult]:
         else:
             results.append(PolicyResult(policy="security.nonroot", status="FAIL", severity="high", explanation=f"container {idx} may run as root", remediation="Set runAsNonRoot: true"))
 
+    # Privileged prohibited
+    for idx, c in enumerate(containers):
+        if c.get("securityContext", {}).get("privileged"):
+            results.append(PolicyResult(policy="security.no-privileged", status="FAIL", severity="critical", explanation=f"container {idx} privileged not allowed", remediation="Remove privileged: true"))
+        else:
+            results.append(PolicyResult(policy="security.no-privileged", status="PASS", severity="low", explanation=f"container {idx} not privileged", remediation=None))
+
+    # Probes and PDB
+    if s.get("deployment", {}).get("environment") == "production":
+        for idx, c in enumerate(containers):
+            if not c.get("readinessProbe"):
+                results.append(PolicyResult(policy="production.readiness", status="FAIL", severity="high", explanation=f"container {idx} missing readinessProbe", remediation="Add readinessProbe"))
+            else:
+                results.append(PolicyResult(policy="production.readiness", status="PASS", severity="low", explanation=f"container {idx} has readinessProbe", remediation=None))
+            if not c.get("livenessProbe"):
+                results.append(PolicyResult(policy="production.liveness", status="FAIL", severity="high", explanation=f"container {idx} missing livenessProbe", remediation="Add livenessProbe"))
+            else:
+                results.append(PolicyResult(policy="production.liveness", status="PASS", severity="low", explanation=f"container {idx} has livenessProbe", remediation=None))
+
+        # PodDisruptionBudget required
+        if not s.get("podDisruptionBudget"):
+            results.append(PolicyResult(policy="production.pdb", status="FAIL", severity="medium", explanation="PodDisruptionBudget required in production", remediation="Add PodDisruptionBudget"))
+        else:
+            results.append(PolicyResult(policy="production.pdb", status="PASS", severity="low", explanation="PDB present", remediation=None))
+
     # Observability
     if s.get("observability", {}).get("metrics"):
         results.append(PolicyResult(policy="observability.metrics", status="PASS", severity="low", explanation="metrics enabled", remediation=None))

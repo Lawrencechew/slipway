@@ -16,20 +16,66 @@ def fingerprint_spec(spec: ServiceSpec) -> str:
     return hashlib.sha256(data.encode("utf-8")).hexdigest()
 
 
-def generate_artifacts(spec: ServiceSpec) -> Dict[str, str]:
-    # Deterministic small artifact generation for v1
+def generate_artifacts(spec: ServiceSpec):
+    # Return structured deterministic artifacts: list of {path, action, content, reason}
     name = spec.metadata.name
-    artifacts = {}
-    # Dockerfile
-    dockerfile = f"FROM python:{spec.spec.get('runtime', {}).get('version','3.13')}\nWORKDIR /app\nCOPY . /app\nCMD [\"python\", \"-m\", \"uvicorn\", \"app.main:app\"]\n"
-    artifacts[f"{name}/Dockerfile"] = dockerfile
+    artifacts = []
+    runtime_ver = spec.spec.get('runtime', {}).get('version', '3.13')
 
-    # helm values
+    dockerfile = f"FROM python:{runtime_ver}\nWORKDIR /app\nCOPY . /app\nCMD [\"python\", \"-m\", \"uvicorn\", \"app.main:app\"]\n"
+    artifacts.append({
+        "path": f"{name}/Dockerfile",
+        "action": "CREATE",
+        "content": dockerfile,
+        "reason": "runtime image and entrypoint",
+    })
+
     values = {
         "replicaCount": spec.spec.get("deployment", {}).get("replicas", 1),
         "resources": spec.spec.get("resources", {}),
     }
-    artifacts[f"{name}/values.yaml"] = json.dumps(values, indent=2)
+    artifacts.append({
+        "path": f"{name}/values.yaml",
+        "action": "CREATE",
+        "content": json.dumps(values, sort_keys=True, indent=2),
+        "reason": "helm values for deployment",
+    })
+
+    # Kubernetes Deployment (simplified and deterministic)
+    deployment = {
+        "apiVersion": "apps/v1",
+        "kind": "Deployment",
+        "metadata": {"name": name},
+        "spec": {
+            "replicas": spec.spec.get("deployment", {}).get("replicas", 1),
+            "template": {"spec": {"containers": spec.spec.get("containers", [])}}
+        }
+    }
+    artifacts.append({
+        "path": f"{name}/k8s/deployment.yaml",
+        "action": "CREATE",
+        "content": json.dumps(deployment, sort_keys=True, indent=2),
+        "reason": "kubernetes deployment manifest",
+    })
+
+    # ServiceAccount and Workload Identity placeholder
+    sa = {"apiVersion": "v1", "kind": "ServiceAccount", "metadata": {"name": f"{name}-sa"}}
+    artifacts.append({
+        "path": f"{name}/k8s/serviceaccount.yaml",
+        "action": "CREATE",
+        "content": json.dumps(sa, sort_keys=True, indent=2),
+        "reason": "service account for workload identity",
+    })
+
+    # PDB if requested
+    if spec.spec.get('podDisruptionBudget') or spec.spec.get('deployment', {}).get('environment') == 'production':
+        pdb = {"apiVersion": "policy/v1", "kind": "PodDisruptionBudget", "metadata": {"name": f"{name}-pdb"}}
+        artifacts.append({
+            "path": f"{name}/k8s/pdb.yaml",
+            "action": "CREATE",
+            "content": json.dumps(pdb, sort_keys=True, indent=2),
+            "reason": "pod disruption budget for availability",
+        })
 
     return artifacts
 
@@ -60,15 +106,26 @@ def create_plan(spec: ServiceSpec) -> Plan:
         db.add(svc_rev)
         db.flush()
 
-        plan_model = PlanModel(id=plan_id, service_revision_id=svc_rev.id, spec_fingerprint=fingerprint, status=PlanModel.status.type.python_type(status) if hasattr(PlanModel.status, 'type') else status, artifacts=_json.dumps(artifacts))
-        # handle enum assignment
+        plan_model = PlanModel(id=plan_id, service_revision_id=svc_rev.id, spec_fingerprint=fingerprint)
         try:
             from .models import PlanStatus
             plan_model.status = getattr(PlanStatus, status)
         except Exception:
             plan_model.status = status
+        plan_model.artifacts = _json.dumps(artifacts, sort_keys=True)
+        # handle enum assignment
 
         db.add(plan_model)
+
+        # supersede previous plans for this service
+        prev_plans = db.query(PlanModel).join(ServiceRevision).filter(ServiceRevision.service_id == svc.id, PlanModel.id != plan_id).all()
+        from .models import PlanStatus as _PS
+        for pp in prev_plans:
+            try:
+                pp.status = _PS.SUPERSEDED
+            except Exception:
+                pp.status = "SUPERSEDED"
+            db.add(pp)
 
         for pr in policy_results:
             pr_model = PolicyResultModel(plan_id=plan_id, policy=pr.policy, status=pr.status, severity=pr.severity, explanation=pr.explanation, remediation=pr.remediation)
@@ -87,3 +144,14 @@ def create_plan(spec: ServiceSpec) -> Plan:
         artifacts=artifacts,
     )
     return plan
+
+
+def persist_revision(db: Session, svc: Service, spec: ServiceSpec, fingerprint: str):
+    # determine revision number
+    rev = db.query(ServiceRevision).filter(ServiceRevision.service_id == svc.id).order_by(ServiceRevision.revision.desc()).first()
+    next_rev = 1 if not rev else rev.revision + 1
+    spec_text = _json.dumps(spec.dict_canonical(), sort_keys=True)
+    svc_rev = ServiceRevision(service_id=svc.id, revision=next_rev, spec=spec_text, fingerprint=fingerprint)
+    db.add(svc_rev)
+    db.flush()
+    return svc_rev
