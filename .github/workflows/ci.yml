@@ -22,7 +22,8 @@ jobs:
         options: >-
           --health-cmd "pg_isready -U postgres" --health-interval 10s --health-timeout 5s --health-retries 5
     env:
-      DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/pavedpath
+      # Use explicit 127.0.0.1 to avoid any localhost/IPv6 resolution surprises
+      DATABASE_URL: postgresql+psycopg://postgres:postgres@127.0.0.1:5432/pavedpath
     steps:
       - uses: actions/checkout@v4
 
@@ -51,9 +52,18 @@ for p in pkgs:
         print(f"{p} not installed: {e}")
 PY
 
+      - name: Wait for Postgres to become ready
+        run: |
+          echo "Waiting for Postgres on 127.0.0.1:5432..."
+          for i in {1..20}; do
+            pg_isready -h 127.0.0.1 -p 5432 -U postgres && { echo 'Postgres ready'; exit 0; } || sleep 3
+          done
+          echo "Postgres did not become ready in time"; exit 1
+
       - name: Run Alembic migrations
         run: |
           alembic upgrade head
+
 
       - name: Run backend tests
         run: |
