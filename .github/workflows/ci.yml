@@ -1,4 +1,4 @@
-name: CI
+name: CI - Public v1
 
 on:
   push:
@@ -7,7 +7,8 @@ on:
     branches: [ main, master ]
 
 jobs:
-  backend:
+  ci:
+    name: CI (backend + frontend)
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -24,17 +25,20 @@ jobs:
       DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/pavedpath
     steps:
       - uses: actions/checkout@v4
+
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.13'
-      - name: Install deps
+
+      - name: Install Poetry and project deps (use committed lockfile)
         run: |
           python -m pip install --upgrade pip
           pip install poetry
           poetry config virtualenvs.create false
           poetry install --no-interaction --no-ansi
-      - name: Show installed package versions
+
+      - name: Print key package versions
         run: |
           python - <<'PY'
 import importlib
@@ -46,27 +50,22 @@ for p in pkgs:
     except Exception as e:
         print(f"{p} not installed: {e}")
 PY
-      - name: Run migrations
+
+      - name: Run Alembic migrations
         run: |
           alembic upgrade head
-      
-      - name: Run tests
+
+      - name: Run backend tests
         run: |
           pytest -q
 
-  frontend:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install Node
+      - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - name: Install frontend deps
+
+      - name: Install and build frontend
         run: |
           cd frontend
           npm ci
-      - name: Build frontend
-        run: |
-          cd frontend
           npm run build
