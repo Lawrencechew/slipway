@@ -2,14 +2,15 @@ name: CI - Public v1
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [main, master]
   pull_request:
-    branches: [ main, master ]
+    branches: [main, master]
 
 jobs:
   ci:
     name: CI (backend + frontend)
     runs-on: ubuntu-latest
+
     services:
       postgres:
         image: postgres:15
@@ -20,19 +21,24 @@ jobs:
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U postgres" --health-interval 10s --health-timeout 5s --health-retries 5
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     env:
-      # Use explicit 127.0.0.1 to avoid any localhost/IPv6 resolution surprises
       DATABASE_URL: postgresql+psycopg://postgres:postgres@127.0.0.1:5432/pavedpath
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Check out repository
+        uses: actions/checkout@v4
 
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.13'
+          python-version: "3.13"
 
-      - name: Install Poetry and project deps (use committed lockfile)
+      - name: Install Poetry and project dependencies
         run: |
           python -m pip install --upgrade pip
           pip install poetry
@@ -42,40 +48,47 @@ jobs:
       - name: Print key package versions
         run: |
           python - <<'PY'
-import importlib
-pkgs = ['fastapi','starlette','httpx','anyio','pytest']
-for p in pkgs:
-    try:
-        m = importlib.import_module(p)
-        print(f"{p}=={getattr(m,'__version__',m)}")
-    except Exception as e:
-        print(f"{p} not installed: {e}")
-PY
+          import importlib
+
+          pkgs = ["fastapi", "starlette", "httpx", "anyio", "pytest"]
+
+          for p in pkgs:
+              try:
+                  m = importlib.import_module(p)
+                  print(f"{p}=={getattr(m, '__version__', m)}")
+              except Exception as e:
+                  print(f"{p} not installed: {e}")
+          PY
 
       - name: Wait for Postgres to become ready
         run: |
           echo "Waiting for Postgres on 127.0.0.1:5432..."
+
           for i in {1..20}; do
-            pg_isready -h 127.0.0.1 -p 5432 -U postgres && { echo 'Postgres ready'; exit 0; } || sleep 3
+            if pg_isready -h 127.0.0.1 -p 5432 -U postgres; then
+              echo "Postgres ready"
+              exit 0
+            fi
+
+            sleep 3
           done
-          echo "Postgres did not become ready in time"; exit 1
+
+          echo "Postgres did not become ready in time"
+          exit 1
 
       - name: Run Alembic migrations
-        run: |
-          alembic upgrade head
-
+        run: alembic upgrade head
 
       - name: Run backend tests
-        run: |
-          pytest -q
+        run: pytest -q
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: "20"
 
       - name: Install and build frontend
+        working-directory: frontend
         run: |
-          cd frontend
           npm ci
           npm run build
