@@ -3,7 +3,7 @@ from starlette.testclient import TestClient
 from app.main import app
 
 client = TestClient(app)
-from app.db import engine, Base
+from app.db import engine, Base, SessionLocal
 from app import models
 
 
@@ -49,8 +49,11 @@ def test_user_and_happy_path():
     assert body.get("approved") is True
 
     # audit events persisted
-    db = next(__import__('app').db.get_db())
-    events = db.query(models.AuditEvent).all()
-    assert any(e.event_type == "SERVICE_SPEC_CREATED" for e in events)
-    assert any(e.event_type == "PLAN_CREATED" for e in events)
-    assert any(e.event_type == "PLAN_APPROVED" for e in events)
+    db = SessionLocal()
+    try:
+        events = db.query(models.AuditEvent).all()
+        assert any(e.event_type == "SERVICE_SPEC_CREATED" for e in events)
+        assert any(e.event_type == "PLAN_CREATED" for e in events)
+        assert any(e.event_type == "PLAN_APPROVED" for e in events)
+    finally:
+        db.close()
