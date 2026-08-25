@@ -83,6 +83,7 @@ Current limitations
 Documentation
 - Architecture: `docs/architecture.md`
 - Design decisions: `docs/design-decisions.md`
+- Policy decision engine: `docs/policy-decision-engine.md`
 
 If you plan to publish this repository, review `SECURITY.md` and `CONTRIBUTING.md` before making it public.
 

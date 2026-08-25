@@ -68,3 +68,17 @@ def test_approval_binding_and_invalid_cannot_be_approved():
     finally:
         db.rollback()
         db.close()
+
+
+def test_policy_decision_persisted_with_reasons_and_version():
+    db = SessionLocal()
+    try:
+        s = sample_spec()
+        plan = create_plan(s)
+        decision = db.query(models.PolicyDecision).filter(models.PolicyDecision.plan_id == plan.id).first()
+        assert decision is not None
+        assert decision.policy_version == "platform-policy-v1"
+        assert decision.outcome.name in {"PASS", "REQUIRES_APPROVAL", "BLOCKED"}
+        assert decision.reasons is not None
+    finally:
+        db.close()

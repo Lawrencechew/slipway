@@ -9,3 +9,4 @@ def test_models_create_all():
     inspector = inspect(engine)
     assert 'users' in inspector.get_table_names()
     assert 'services' in inspector.get_table_names()
+    assert 'policy_decisions' in inspector.get_table_names()

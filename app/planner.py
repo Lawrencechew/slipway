@@ -1,13 +1,24 @@
+import datetime
 import hashlib
 import json
-import datetime
-from typing import Dict, Any
-from .schemas import ServiceSpec, Plan, PolicyResult
-from .policies import evaluate_policies
-from .db import SessionLocal, engine
-from .models import Service, ServiceRevision, Plan as PlanModel, PolicyResult as PolicyResultModel
-import json as _json
+from typing import Any, Dict, List
+
 from sqlalchemy.orm import Session
+
+from .db import SessionLocal
+from .models import (
+    DecisionOutcome,
+    Plan as PlanModel,
+    PlanStatus,
+    PolicyDecision as PolicyDecisionModel,
+    PolicyResult as PolicyResultModel,
+    RiskLevel,
+    Service,
+    ServiceRevision,
+)
+from .policies import evaluate_policies
+from .policy_engine import evaluate_policy_decision
+from .schemas import Plan, PolicyDecisionSummary, ServiceSpec
 
 
 def fingerprint_spec(spec: ServiceSpec) -> str:
@@ -16,81 +27,141 @@ def fingerprint_spec(spec: ServiceSpec) -> str:
     return hashlib.sha256(data.encode("utf-8")).hexdigest()
 
 
-def generate_artifacts(spec: ServiceSpec):
-    # Return structured deterministic artifacts: list of {path, action, content, reason}
+def generate_artifacts(spec: ServiceSpec) -> List[Dict[str, Any]]:
     name = spec.metadata.name
     artifacts = []
-    runtime_ver = spec.spec.get('runtime', {}).get('version', '3.13')
+    runtime_ver = spec.spec.get("runtime", {}).get("version", "3.13")
 
-    dockerfile = f"FROM python:{runtime_ver}\nWORKDIR /app\nCOPY . /app\nCMD [\"python\", \"-m\", \"uvicorn\", \"app.main:app\"]\n"
-    artifacts.append({
-        "path": f"{name}/Dockerfile",
-        "action": "CREATE",
-        "content": dockerfile,
-        "reason": "runtime image and entrypoint",
-    })
+    dockerfile = (
+        f"FROM python:{runtime_ver}\nWORKDIR /app\nCOPY . /app\n"
+        'CMD ["python", "-m", "uvicorn", "app.main:app"]\n'
+    )
+    artifacts.append(
+        {
+            "path": f"{name}/Dockerfile",
+            "action": "CREATE",
+            "content": dockerfile,
+            "reason": "runtime image and entrypoint",
+        }
+    )
 
     values = {
         "replicaCount": spec.spec.get("deployment", {}).get("replicas", 1),
         "resources": spec.spec.get("resources", {}),
     }
-    artifacts.append({
-        "path": f"{name}/values.yaml",
-        "action": "CREATE",
-        "content": json.dumps(values, sort_keys=True, indent=2),
-        "reason": "helm values for deployment",
-    })
+    artifacts.append(
+        {
+            "path": f"{name}/values.yaml",
+            "action": "CREATE",
+            "content": json.dumps(values, sort_keys=True, indent=2),
+            "reason": "helm values for deployment",
+        }
+    )
 
-    # Kubernetes Deployment (simplified and deterministic)
     deployment = {
         "apiVersion": "apps/v1",
         "kind": "Deployment",
         "metadata": {"name": name},
         "spec": {
             "replicas": spec.spec.get("deployment", {}).get("replicas", 1),
-            "template": {"spec": {"containers": spec.spec.get("containers", [])}}
-        }
+            "template": {"spec": {"containers": spec.spec.get("containers", [])}},
+        },
     }
-    artifacts.append({
-        "path": f"{name}/k8s/deployment.yaml",
-        "action": "CREATE",
-        "content": json.dumps(deployment, sort_keys=True, indent=2),
-        "reason": "kubernetes deployment manifest",
-    })
-
-    # ServiceAccount and Workload Identity placeholder
-    sa = {"apiVersion": "v1", "kind": "ServiceAccount", "metadata": {"name": f"{name}-sa"}}
-    artifacts.append({
-        "path": f"{name}/k8s/serviceaccount.yaml",
-        "action": "CREATE",
-        "content": json.dumps(sa, sort_keys=True, indent=2),
-        "reason": "service account for workload identity",
-    })
-
-    # PDB if requested
-    if spec.spec.get('podDisruptionBudget') or spec.spec.get('deployment', {}).get('environment') == 'production':
-        pdb = {"apiVersion": "policy/v1", "kind": "PodDisruptionBudget", "metadata": {"name": f"{name}-pdb"}}
-        artifacts.append({
-            "path": f"{name}/k8s/pdb.yaml",
+    artifacts.append(
+        {
+            "path": f"{name}/k8s/deployment.yaml",
             "action": "CREATE",
-            "content": json.dumps(pdb, sort_keys=True, indent=2),
-            "reason": "pod disruption budget for availability",
-        })
+            "content": json.dumps(deployment, sort_keys=True, indent=2),
+            "reason": "kubernetes deployment manifest",
+        }
+    )
+
+    sa = {"apiVersion": "v1", "kind": "ServiceAccount", "metadata": {"name": f"{name}-sa"}}
+    artifacts.append(
+        {
+            "path": f"{name}/k8s/serviceaccount.yaml",
+            "action": "CREATE",
+            "content": json.dumps(sa, sort_keys=True, indent=2),
+            "reason": "service account for workload identity",
+        }
+    )
+
+    if spec.spec.get("podDisruptionBudget") or spec.spec.get("deployment", {}).get(
+        "environment"
+    ) == "production":
+        pdb = {
+            "apiVersion": "policy/v1",
+            "kind": "PodDisruptionBudget",
+            "metadata": {"name": f"{name}-pdb"},
+        }
+        artifacts.append(
+            {
+                "path": f"{name}/k8s/pdb.yaml",
+                "action": "CREATE",
+                "content": json.dumps(pdb, sort_keys=True, indent=2),
+                "reason": "pod disruption budget for availability",
+            }
+        )
 
     return artifacts
+
+
+def decision_model_to_summary(decision: PolicyDecisionModel) -> PolicyDecisionSummary:
+    return PolicyDecisionSummary(
+        decision_id=decision.decision_id,
+        outcome=decision.outcome.value,
+        risk_level=decision.risk_level.value,
+        policy_version=decision.policy_version,
+        reasons=json.loads(decision.reasons or "[]"),
+        required_approvals=json.loads(decision.required_approvals or "[]"),
+        blocking_violations=json.loads(decision.blocking_violations or "[]"),
+        advisory_warnings=json.loads(decision.advisory_warnings or "[]"),
+        evaluated_at=decision.evaluated_at.isoformat() if decision.evaluated_at else None,
+        is_stale=decision.is_stale,
+        stale_reason=decision.stale_reason,
+    )
+
+
+def invalidate_active_decisions_for_service(
+    db: Session, service_id: int, current_fingerprint: str, stale_reason: str
+) -> int:
+    decisions = (
+        db.query(PolicyDecisionModel)
+        .join(PlanModel, PlanModel.id == PolicyDecisionModel.plan_id)
+        .join(ServiceRevision, ServiceRevision.id == PlanModel.service_revision_id)
+        .filter(
+            ServiceRevision.service_id == service_id,
+            PolicyDecisionModel.is_stale.is_(False),
+            PolicyDecisionModel.spec_fingerprint != current_fingerprint,
+        )
+        .all()
+    )
+
+    for decision in decisions:
+        decision.is_stale = True
+        decision.stale_reason = stale_reason
+        db.add(decision)
+
+    return len(decisions)
 
 
 def create_plan(spec: ServiceSpec) -> Plan:
     fingerprint = fingerprint_spec(spec)
     policy_results = evaluate_policies(spec)
+    decision = evaluate_policy_decision(spec)
     artifacts = generate_artifacts(spec)
-    plan_id = hashlib.sha1((fingerprint + str(datetime.datetime.utcnow().timestamp())).encode("utf-8")).hexdigest()
-    status = "READY" if all(p.status == "PASS" or p.status == "WARN" for p in policy_results) else "INVALID"
+    now = datetime.datetime.utcnow()
+    plan_id = hashlib.sha1(f"{fingerprint}:{now.timestamp()}".encode("utf-8")).hexdigest()
+    has_policy_failures = any(p.status == "FAIL" for p in policy_results)
+    status = (
+        "INVALID"
+        if has_policy_failures or decision.outcome == "BLOCKED"
+        else "READY"
+    )
 
-    # persist plan and policy results to DB
     db: Session = SessionLocal()
+    decision_summary: PolicyDecisionSummary
     try:
-        # Ensure service and revision exist or create minimal
         svc_name = spec.metadata.name
         svc = db.query(Service).filter(Service.name == svc_name).first()
         if not svc:
@@ -98,59 +169,104 @@ def create_plan(spec: ServiceSpec) -> Plan:
             db.add(svc)
             db.flush()
 
-        # determine revision number
-        rev = db.query(ServiceRevision).filter(ServiceRevision.service_id == svc.id).order_by(ServiceRevision.revision.desc()).first()
+        rev = (
+            db.query(ServiceRevision)
+            .filter(ServiceRevision.service_id == svc.id)
+            .order_by(ServiceRevision.revision.desc())
+            .first()
+        )
         next_rev = 1 if not rev else rev.revision + 1
-        spec_text = _json.dumps(spec.dict_canonical(), sort_keys=True)
-        svc_rev = ServiceRevision(service_id=svc.id, revision=next_rev, spec=spec_text, fingerprint=fingerprint)
+        spec_text = json.dumps(spec.dict_canonical(), sort_keys=True)
+        svc_rev = ServiceRevision(
+            service_id=svc.id, revision=next_rev, spec=spec_text, fingerprint=fingerprint
+        )
         db.add(svc_rev)
         db.flush()
 
-        plan_model = PlanModel(id=plan_id, service_revision_id=svc_rev.id, spec_fingerprint=fingerprint)
-        try:
-            from .models import PlanStatus
-            plan_model.status = getattr(PlanStatus, status)
-        except Exception:
-            plan_model.status = status
-        plan_model.artifacts = _json.dumps(artifacts, sort_keys=True)
-        # handle enum assignment
-
+        plan_model = PlanModel(
+            id=plan_id,
+            service_revision_id=svc_rev.id,
+            spec_fingerprint=fingerprint,
+            status=getattr(PlanStatus, status),
+            artifacts=json.dumps(artifacts, sort_keys=True),
+        )
         db.add(plan_model)
+        db.flush()
 
-        # supersede previous plans for this service
-        prev_plans = db.query(PlanModel).join(ServiceRevision).filter(ServiceRevision.service_id == svc.id, PlanModel.id != plan_id).all()
-        from .models import PlanStatus as _PS
-        for pp in prev_plans:
-            try:
-                pp.status = _PS.SUPERSEDED
-            except Exception:
-                pp.status = "SUPERSEDED"
-            db.add(pp)
+        decision_id = hashlib.sha1(
+            f"{plan_id}:{decision.policy_version}:{fingerprint}".encode("utf-8")
+        ).hexdigest()
+        decision_model = PolicyDecisionModel(
+            decision_id=decision_id,
+            plan_id=plan_id,
+            spec_fingerprint=fingerprint,
+            outcome=getattr(DecisionOutcome, decision.outcome),
+            risk_level=getattr(RiskLevel, decision.risk_level),
+            policy_version=decision.policy_version,
+            reasons=json.dumps(decision.reasons, sort_keys=True),
+            required_approvals=json.dumps(decision.required_approvals, sort_keys=True),
+            blocking_violations=json.dumps(decision.blocking_violations, sort_keys=True),
+            advisory_warnings=json.dumps(decision.advisory_warnings, sort_keys=True),
+            is_stale=False,
+            stale_reason=None,
+        )
+        db.add(decision_model)
+
+        prev_plans = (
+            db.query(PlanModel)
+            .join(ServiceRevision, ServiceRevision.id == PlanModel.service_revision_id)
+            .filter(ServiceRevision.service_id == svc.id, PlanModel.id != plan_id)
+            .all()
+        )
+        for prev_plan in prev_plans:
+            prev_plan.status = PlanStatus.SUPERSEDED
+            db.add(prev_plan)
+
+        invalidate_active_decisions_for_service(
+            db=db,
+            service_id=svc.id,
+            current_fingerprint=fingerprint,
+            stale_reason="NEWER_PLAN_CREATED",
+        )
 
         for pr in policy_results:
-            pr_model = PolicyResultModel(plan_id=plan_id, policy=pr.policy, status=pr.status, severity=pr.severity, explanation=pr.explanation, remediation=pr.remediation)
-            db.add(pr_model)
+            db.add(
+                PolicyResultModel(
+                    plan_id=plan_id,
+                    policy=pr.policy,
+                    status=pr.status,
+                    severity=pr.severity,
+                    explanation=pr.explanation,
+                    remediation=pr.remediation,
+                )
+            )
 
         db.commit()
+        db.refresh(decision_model)
+        decision_summary = decision_model_to_summary(decision_model)
     finally:
         db.close()
 
-    plan = Plan(
+    return Plan(
         id=plan_id,
         spec_fingerprint=fingerprint,
-        created=datetime.datetime.utcnow().isoformat() + "Z",
+        created=now.isoformat() + "Z",
         status=status,
         policy_results=policy_results,
+        policy_decision=decision_summary,
         artifacts=artifacts,
     )
-    return plan
 
 
 def persist_revision(db: Session, svc: Service, spec: ServiceSpec, fingerprint: str):
-    # determine revision number
-    rev = db.query(ServiceRevision).filter(ServiceRevision.service_id == svc.id).order_by(ServiceRevision.revision.desc()).first()
+    rev = (
+        db.query(ServiceRevision)
+        .filter(ServiceRevision.service_id == svc.id)
+        .order_by(ServiceRevision.revision.desc())
+        .first()
+    )
     next_rev = 1 if not rev else rev.revision + 1
-    spec_text = _json.dumps(spec.dict_canonical(), sort_keys=True)
+    spec_text = json.dumps(spec.dict_canonical(), sort_keys=True)
     svc_rev = ServiceRevision(service_id=svc.id, revision=next_rev, spec=spec_text, fingerprint=fingerprint)
     db.add(svc_rev)
     db.flush()

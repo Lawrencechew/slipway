@@ -23,4 +23,7 @@ def test_fingerprint_and_plan():
     plan = create_plan(spec)
     assert plan.spec_fingerprint == fp
     assert plan.status == "READY"
+    assert plan.policy_decision is not None
+    assert plan.policy_decision.policy_version == "platform-policy-v1"
+    assert plan.policy_decision.outcome in {"PASS", "REQUIRES_APPROVAL", "BLOCKED"}
     assert any(a.get('path') == 'orders-api/Dockerfile' for a in plan.artifacts)

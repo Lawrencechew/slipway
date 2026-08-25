@@ -16,6 +16,18 @@ class PlanStatus(enum.Enum):
     SUPERSEDED = "SUPERSEDED"
 
 
+class DecisionOutcome(enum.Enum):
+    PASS = "PASS"
+    REQUIRES_APPROVAL = "REQUIRES_APPROVAL"
+    BLOCKED = "BLOCKED"
+
+
+class RiskLevel(enum.Enum):
+    LOW = "LOW"
+    MEDIUM = "MEDIUM"
+    HIGH = "HIGH"
+
+
 class User(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True)
@@ -56,6 +68,7 @@ class Plan(Base):
     artifacts = Column(Text)
     service_revision = relationship("ServiceRevision")
     approvals = relationship("Approval", back_populates="plan")
+    policy_decision = relationship("PolicyDecision", back_populates="plan", uselist=False)
 
 
 class PolicyResult(Base):
@@ -67,6 +80,26 @@ class PolicyResult(Base):
     severity = Column(String(50))
     explanation = Column(Text)
     remediation = Column(Text)
+
+
+class PolicyDecision(Base):
+    __tablename__ = "policy_decisions"
+    id = Column(Integer, primary_key=True)
+    decision_id = Column(String(64), nullable=False, unique=True, index=True)
+    plan_id = Column(String(64), ForeignKey("plans.id"), nullable=False, unique=True)
+    spec_fingerprint = Column(String(128), nullable=False)
+    outcome = Column(Enum(DecisionOutcome), nullable=False)
+    risk_level = Column(Enum(RiskLevel), nullable=False)
+    policy_version = Column(String(64), nullable=False)
+    reasons = Column(Text, nullable=False)
+    required_approvals = Column(Text, nullable=False)
+    blocking_violations = Column(Text, nullable=False)
+    advisory_warnings = Column(Text, nullable=False)
+    is_stale = Column(Boolean, nullable=False, default=False)
+    stale_reason = Column(Text)
+    evaluated_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    plan = relationship("Plan", back_populates="policy_decision")
 
 
 class Approval(Base):

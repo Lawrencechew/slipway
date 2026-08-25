@@ -59,10 +59,25 @@ class PolicyResult(BaseModel):
     remediation: Optional[str]
 
 
+class PolicyDecisionSummary(BaseModel):
+    decision_id: str
+    outcome: str
+    risk_level: str
+    policy_version: str
+    reasons: List[Dict[str, str]] = []
+    required_approvals: List[str] = []
+    blocking_violations: List[Dict[str, str]] = []
+    advisory_warnings: List[Dict[str, str]] = []
+    evaluated_at: Optional[str] = None
+    is_stale: bool = False
+    stale_reason: Optional[str] = None
+
+
 class Plan(BaseModel):
     id: str
     spec_fingerprint: str
     created: str
     status: str
     policy_results: List[PolicyResult] = []
+    policy_decision: Optional[PolicyDecisionSummary] = None
     artifacts: List[Dict[str, Any]] = []

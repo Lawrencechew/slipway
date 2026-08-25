@@ -70,6 +70,30 @@ export default function App(){
       {view === 'plan' && plan && (<div>
         <h2>Plan: {plan.id}</h2>
         <p>Status: {plan.status}</p>
+        {plan.policy_decision && (
+          <div style={{border:'1px solid #ccc', padding:12, borderRadius:8, marginBottom:12}}>
+            <h3>Policy Decision</h3>
+            <p><strong>Outcome:</strong> {plan.policy_decision.outcome}</p>
+            <p><strong>Risk:</strong> {plan.policy_decision.risk_level}</p>
+            <p><strong>Policy Version:</strong> {plan.policy_decision.policy_version}</p>
+            <p><strong>Why:</strong></p>
+            <ul>
+              {plan.policy_decision.reasons.map((r:any, i:number)=>(<li key={i}>{r.code} — {r.message}</li>))}
+            </ul>
+            <p><strong>Required Approvals:</strong></p>
+            <ul>
+              {plan.policy_decision.required_approvals.map((r:string, i:number)=>(<li key={i}>{r}</li>))}
+            </ul>
+            {plan.policy_decision.blocking_violations?.length > 0 && (
+              <>
+                <p><strong>Blocking Violations:</strong></p>
+                <ul>
+                  {plan.policy_decision.blocking_violations.map((b:any, i:number)=>(<li key={i}>{b.code} — {b.message}</li>))}
+                </ul>
+              </>
+            )}
+          </div>
+        )}
         <h3>Artifacts</h3>
         <ul>
           {plan.artifacts.map((a:any,i:number)=>(<li key={i}>{a.path} — {a.reason}</li>))}
