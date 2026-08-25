@@ -1,4 +1,4 @@
-# Controlled Execution (Phase 6)
+# Controlled Execution
 
 ## Execution boundary
 

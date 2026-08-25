@@ -1,45 +1,44 @@
-## Architecture Overview
+# PavedPath Architecture
 
-This document describes the high-level architecture implemented in PavedPath (v1).
-
-flowchart LR
-    Dev[Developer Intent] --> Spec[ServiceSpec]
-    Spec --> Policy[Policy Validation]
-    Policy --> Planner[Deterministic Planner]
-    Planner --> Plan[Plan + Diff]
-    Plan --> Review[Approval]
-    Review --> Git[Git Handoff]
-    Git --> CI[CI/CD]
-    CI --> AKS[Azure / AKS]
-
-Components
-- `app/` — FastAPI backend providing endpoints to create users, submit specs, generate plans, and record approvals.
-- `planner` — deterministic artifact generation and plan creation persisted as `ServiceRevision` and `Plan` records.
-- `policies` — rule checks applied during plan generation (replicas, resource limits, probes, etc.).
-- `migrations/` — Alembic-managed schema for PostgreSQL persistence.
-- `frontend/` — React SPA demonstrating the end-to-end flow: Create → Validate → Plan → Review → Approve → Mock Git handoff.
-
-Persistence model (summary)
-- `Service` — logical service with many `ServiceRevision` entries.
-- `ServiceRevision` — snapshot of a ServiceSpec, fingerprinted for determinism.
-- `Plan` — generated from a revision; contains artifacts and status (READY, APPROVED, SUPERSEDED).
-- `Approval` — binds a user to a plan and its revision fingerprint.
-- `AuditEvent` — append-only events recording major actions.
-
-Notes
-- Git handoff and CI/CD are demo/mocked in this repository; the project demonstrates the boundaries rather than a full production integration.
-# PavedPath Architecture (v1)
-
-Mermaid diagrams and high-level description of the architecture.
+PavedPath is a reference control plane that governs request -> policy -> approval -> execution with deterministic server-side decisions and persistent evidence.
 
 ```mermaid
 flowchart TD
-  Dev[Developer]
-  UI[Frontend]
-  API[Backend API]
-  DB[(Postgres)]
-  Git[GitHub]
-
-  Dev --> UI --> API --> DB
-  API --> Git
+    Dev[Developer] --> UI[React UI]
+    UI --> API[FastAPI Control Plane]
+    API --> Req[Service Request / Revision]
+    API --> Plan[Deterministic Planner]
+    API --> Policy[Policy Decision Engine]
+    Policy --> Pass[PASS]
+    Policy --> ReqApproval[REQUIRES_APPROVAL]
+    Policy --> Blocked[BLOCKED]
+    API --> Approval[Approval Boundary]
+    Approval --> Exec[Controlled Executor]
+    Exec --> Receipt[Execution Receipt]
+    API --> Audit[Audit Events]
+    Req --> DB[(PostgreSQL)]
+    Plan --> DB
+    Policy --> DB
+    Approval --> DB
+    Exec --> DB
+    Receipt --> DB
+    Audit --> DB
 ```
+
+## Core components
+
+- `app/main.py` - API boundaries for spec submission, planning, approval, and execution.
+- `app/policy_engine.py` - deterministic policy/risk evaluation (`PASS`, `REQUIRES_APPROVAL`, `BLOCKED`).
+- `app/planner.py` - deterministic planning and fingerprint-based revision binding.
+- `app/executor.py` - deterministic local executor abstraction for controlled execution.
+- `migrations/` - Alembic migration chain for persistent evidence models.
+- `tests/` - lifecycle tests covering policy, approvals, idempotency, execution receipts, and audit behavior.
+
+## Persistence summary
+
+- `services`, `service_revisions` - request/revision lineage.
+- `plans` - deterministic plan records and lifecycle state.
+- `policy_decisions` - persisted policy outcomes, reasons, risk, version, and staleness.
+- `approvals` - reviewer approval records bound to plan fingerprint.
+- `executions` - controlled execution records, idempotency key, status, and receipt.
+- `audit_events` - lifecycle traceability.

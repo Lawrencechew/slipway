@@ -1,4 +1,4 @@
-# Policy Decision Engine (Phase 5)
+# Policy Decision Engine
 
 ## Why this exists
 
@@ -31,9 +31,9 @@ Persisted policy decisions record:
 
 ## Risk and outcome behavior
 
-- **LOW**: outcome `PASS`, baseline approval requirement
-- **MEDIUM**: outcome `REQUIRES_APPROVAL`, explicit platform-owner approval requirement
-- **HIGH**: outcome `REQUIRES_APPROVAL`, stronger approval requirements (platform + security)
+- **LOW**: outcome `PASS`, required approvals: `["STANDARD_APPROVAL"]`
+- **MEDIUM**: outcome `REQUIRES_APPROVAL`, required approvals: `["PLATFORM_OWNER_APPROVAL"]`
+- **HIGH**: outcome `REQUIRES_APPROVAL`, required approvals: `["PLATFORM_OWNER_APPROVAL","SECURITY_REVIEW_APPROVAL"]`
 - **BLOCKED**: approval is denied server-side
 
 ## Policy versioning
