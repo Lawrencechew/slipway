@@ -28,6 +28,13 @@ class RiskLevel(enum.Enum):
     HIGH = "HIGH"
 
 
+class ExecutionStatus(enum.Enum):
+    PENDING = "PENDING"
+    RUNNING = "RUNNING"
+    SUCCEEDED = "SUCCEEDED"
+    FAILED = "FAILED"
+
+
 class User(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True)
@@ -120,6 +127,30 @@ class GitOperation(Base):
     operation = Column(String(50))
     result = Column(Text)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class Execution(Base):
+    __tablename__ = "executions"
+    id = Column(Integer, primary_key=True)
+    execution_id = Column(String(64), nullable=False, unique=True, index=True)
+    execution_key = Column(String(128), nullable=False, unique=True, index=True)
+    plan_id = Column(String(64), ForeignKey("plans.id"), nullable=False)
+    service_revision_id = Column(Integer, ForeignKey("service_revisions.id"), nullable=False)
+    policy_decision_id = Column(String(64), nullable=False)
+    policy_version = Column(String(64), nullable=False)
+    approval_snapshot = Column(Text, nullable=False)
+    input_fingerprint = Column(String(128), nullable=False)
+    status = Column(Enum(ExecutionStatus), nullable=False, default=ExecutionStatus.PENDING)
+    started_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    completed_at = Column(DateTime(timezone=True))
+    executor_type = Column(String(100), nullable=False)
+    executor_version = Column(String(50), nullable=False)
+    result_summary = Column(Text)
+    error_info = Column(Text)
+    receipt = Column(Text, nullable=False)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    plan = relationship("Plan")
+    service_revision = relationship("ServiceRevision")
 
 
 class AuditEvent(Base):

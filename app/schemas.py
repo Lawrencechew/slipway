@@ -81,3 +81,21 @@ class Plan(BaseModel):
     policy_results: List[PolicyResult] = []
     policy_decision: Optional[PolicyDecisionSummary] = None
     artifacts: List[Dict[str, Any]] = []
+
+
+class ExecutionRecord(BaseModel):
+    execution_id: str
+    plan_id: str
+    service_revision_id: int
+    policy_decision_id: str
+    policy_version: str
+    approval_snapshot: Dict[str, Any]
+    input_fingerprint: str
+    status: str
+    started_at: Optional[str] = None
+    completed_at: Optional[str] = None
+    executor_type: str
+    executor_version: str
+    result_summary: Optional[str] = None
+    error_info: Optional[str] = None
+    receipt: Dict[str, Any]
