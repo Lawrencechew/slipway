@@ -22,12 +22,12 @@ from .planner import (
 from .schemas import ExecutionRecord, ServiceSpec
 
 app = FastAPI(
-    title="PavedPath",
+    title="Slipway",
     description=(
-        "PavedPath converts a typed ServiceSpec into a policy-validated, deterministic "
+        "Slipway converts a typed ServiceSpec into a policy-validated, deterministic "
         "Plan that can be reviewed, approved, executed, and audited."
     ),
-    version="0.1.0",
+    version="1.0.0",
 )
 
 app.add_middleware(

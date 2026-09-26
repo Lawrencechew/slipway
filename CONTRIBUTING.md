@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for taking an interest in PavedPath. This project is a portfolio/demo repository intended to show platform engineering patterns.
+Thanks for taking an interest in Slipway. This project is a portfolio/demo repository intended to show platform engineering patterns.
 
 Local setup
 1. Copy `.env.example` to `.env` and fill `DATABASE_URL`.

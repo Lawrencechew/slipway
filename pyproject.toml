@@ -1,7 +1,7 @@
 [tool.poetry]
-name = "pavedpath"
-version = "0.1.0"
-description = "PavedPath — Git-native golden-path platform for Azure/AKS (v1)"
+name = "slipway"
+version = "1.0.0"
+description = "Slipway — Git-native Golden Paths for Platform Engineering (reference implementation)"
 authors = ["Lawrence Chew <lawrence.chew@example.com>"]
 
 # Let Poetry find the package directory
@@ -22,7 +22,7 @@ pytest = "^7.4"
 # ruff removed from dev-dependencies to avoid CI resolution issues
 
 [tool.poetry.scripts]
-pavedpath = "app.main:run"
+slipway = "app.main:run"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

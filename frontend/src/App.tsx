@@ -134,7 +134,7 @@ export default function App() {
 
   return (
     <div style={{ fontFamily: "Inter, system-ui", padding: 20 }}>
-      <h1>PavedPath (Demo)</h1>
+      <h1>Slipway (Demo)</h1>
       <div style={{ marginBottom: 10 }}>
         <button onClick={() => setView("dash")}>Dashboard</button>
         <button onClick={() => setView("create")}>Create Service</button>

@@ -1,6 +1,6 @@
-# PavedPath Architecture
+# Slipway Architecture
 
-PavedPath is a reference control plane that governs request -> policy -> approval -> execution with deterministic server-side decisions and persistent evidence.
+Slipway is a reference control plane that governs request -> policy -> approval -> execution with deterministic server-side decisions and persistent evidence.
 
 ```mermaid
 flowchart TD

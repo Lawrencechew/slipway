@@ -1,15 +1,19 @@
-# PavedPath
+# Slipway
+
+_Git-native Golden Paths for Platform Engineering_
 
 [![CI - Public v1](https://github.com/Lawrencechew/pavedpath/actions/workflows/ci.yml/badge.svg)](https://github.com/Lawrencechew/pavedpath/actions/workflows/ci.yml)
 
-PavedPath is a reference platform control plane that turns structured developer requests into deterministic policy decisions, governed approvals, and auditable controlled execution.
+> Repository slug remains `pavedpath` in badge URLs until the owner performs the GitHub rename to `slipway`.
+
+Slipway is a reference platform control plane that turns structured developer requests into deterministic policy decisions, governed approvals, and auditable controlled execution.
 
 ## The Problem
 
 Platform teams need to offer self-service without letting stale or risky changes bypass governance.  
-PavedPath demonstrates how a control plane can enforce that requests are evaluated, approved, and executed only when they still match the exact reviewed input.
+Slipway demonstrates how a control plane can enforce that requests are evaluated, approved, and executed only when they still match the exact reviewed input.
 
-## What PavedPath demonstrates
+## What Slipway demonstrates
 
 - structured service requests (`ServiceSpec`)
 - deterministic planning and fingerprinting
@@ -124,16 +128,22 @@ npm run build
 
 Use the repository CI workflow (or equivalent local Postgres setup) so lifecycle tests run against PostgreSQL, not only SQLite defaults.
 
+If your local environment cannot load `libpq` for `psycopg`, install a binary wheel:
+
+```bash
+python -m pip install psycopg-binary
+```
+
 ## CI evidence
 
 Latest portfolio closeout run (at time of update):
 
 - Workflow: `CI - Public v1`
-- Run ID: `32806300580`
-- Commit: `8ef2d96dba917526efae0d9e46a4853a0b0460a4`
+- Run ID: `32806845335`
+- Commit: `5d4252afab0d247ed9deb72eae4e5d47c9cade7f`
 - Result: `success`
 
 ## Security boundary note
 
-PavedPath demonstrates control-state governance (policy + approval + execution eligibility).  
+Slipway demonstrates control-state governance (policy + approval + execution eligibility).  
 It does not claim to implement full production security architecture or enterprise identity federation in this repository.

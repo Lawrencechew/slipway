@@ -2,7 +2,7 @@
 
 ## Why this exists
 
-PavedPath now includes a deterministic, server-side policy decision layer so request governance is explainable, reproducible, and auditable before approval.
+Slipway includes a deterministic, server-side policy decision layer so request governance is explainable, reproducible, and auditable before approval.
 
 No LLM, cloud API, or external policy service is used for authorization decisions.
 

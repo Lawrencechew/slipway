@@ -11,17 +11,23 @@ poetry config virtualenvs.create false
 poetry install
 ```
 
-3. Start PostgreSQL locally (docker-compose):
+3. Start PostgreSQL locally:
 
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
 4. Run migrations:
 
 ```bash
-export DATABASE_URL=postgresql://pavedpath:pavedpath@localhost:5432/pavedpath
+export DATABASE_URL=postgresql://postgres:postgres@localhost:5432/slipway
 alembic upgrade head
+```
+
+If migration startup fails with a `libpq`/`psycopg` wrapper import error on your OS, install:
+
+```bash
+python -m pip install psycopg-binary
 ```
 
 5. Run backend:
@@ -34,6 +40,6 @@ python -m app.main
 
 ```bash
 cd frontend
-npm install
+npm ci
 npm run dev
 ```

@@ -2,7 +2,7 @@
 
 ## Execution boundary
 
-PavedPath executes only after policy + approval gates are satisfied. Execution is a server-side control-state decision, not a frontend decision.
+Slipway executes only after policy + approval gates are satisfied. Execution is a server-side control-state decision, not a frontend decision.
 
 ## Lifecycle
 

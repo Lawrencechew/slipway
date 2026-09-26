@@ -36,7 +36,7 @@ class SLO(BaseModel):
 
 
 class ServiceSpec(BaseModel):
-    apiVersion: str = Field("pavedpath.dev/v1")
+    apiVersion: str = Field("slipway.dev/v1")
     kind: str = Field("Service")
     metadata: Metadata
     spec: dict

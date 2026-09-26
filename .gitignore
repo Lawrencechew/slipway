@@ -27,3 +27,4 @@ coverage/
 # Logs
 *.log
 pavedpath.db
+slipway.db

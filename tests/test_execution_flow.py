@@ -23,7 +23,7 @@ def _create_user(username: str):
 
 def _base_spec(name: str, *, environment: str = "staging", public: bool = False, sensitivity: str = "low"):
     return {
-        "apiVersion": "pavedpath.dev/v1",
+        "apiVersion": "slipway.dev/v1",
         "kind": "Service",
         "metadata": {"name": name, "owner": "platform"},
         "spec": {

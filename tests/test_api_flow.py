@@ -24,7 +24,7 @@ def test_user_and_happy_path():
     headers = {"Authorization": f"Bearer {token}"}
 
     spec = {
-        "apiVersion": "pavedpath.dev/v1",
+        "apiVersion": "slipway.dev/v1",
         "kind": "Service",
         "metadata": {"name": "orders-api", "owner": "commerce"},
         "spec": {"runtime": {"language": "python", "version": "3.13"}, "deployment": {"environment": "production", "replicas": 3}, "resources": {"limits": {"cpu": "250m"}}, "containers": [{"name": "app", "securityContext": {"runAsNonRoot": True}, "readinessProbe": {"httpGet": {"path": "/health"}}, "livenessProbe": {"httpGet": {"path": "/health"}}}], "podDisruptionBudget": {"minAvailable": 1}, "observability": {"metrics": True}}
@@ -67,7 +67,7 @@ def test_blocked_policy_cannot_be_approved():
     headers = {"Authorization": f"Bearer {token}"}
 
     blocked_spec = {
-        "apiVersion": "pavedpath.dev/v1",
+        "apiVersion": "slipway.dev/v1",
         "kind": "Service",
         "metadata": {"name": "blocked-service", "owner": "security"},
         "spec": {
@@ -105,7 +105,7 @@ def test_stale_policy_decision_rejected_after_spec_update():
     headers = {"Authorization": f"Bearer {token}"}
 
     base_spec = {
-        "apiVersion": "pavedpath.dev/v1",
+        "apiVersion": "slipway.dev/v1",
         "kind": "Service",
         "metadata": {"name": "stale-service", "owner": "platform"},
         "spec": {
