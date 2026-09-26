@@ -17,4 +17,4 @@ All notable changes to this repository are documented in this file.
 - Frontend Vite dependency upgraded to `6.4.3` to address known security advisories.
 
 ### Notes
-- Repository slug references remain on `pavedpath` until the owner performs the GitHub repository rename.
+- GitHub repository slug finalized as `slipway`.

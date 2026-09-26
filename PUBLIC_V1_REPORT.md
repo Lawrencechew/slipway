@@ -30,9 +30,9 @@
 ## Rename status
 
 - Public branding updated to **Slipway** across backend title, frontend title, docs, metadata, and report/changelog.
-- Remaining `pavedpath` occurrences are intentional:
-  1. README badge URL still targets current GitHub slug until owner renames repository.
-  2. `.gitignore` keeps `pavedpath.db` for legacy local cleanup compatibility.
+- GitHub repository slug finalized as **slipway** and README badge/link URLs updated.
+- Remaining `pavedpath` occurrences are intentional historical/compatibility references:
+  1. `.gitignore` keeps `pavedpath.db` for legacy local cleanup compatibility.
 
 ## Security/publication audit
 
@@ -63,16 +63,10 @@
 - Consider documenting/packaging a Windows-friendly PostgreSQL driver path (`psycopg-binary`) for clean local Postgres onboarding.
 
 ### POLISH
-- Replace README badge URL to `.../slipway/...` immediately after repository rename.
 - Consider removing deprecated Compose `version` key from historical branches/tags as needed.
 
 ## Manual actions remaining (owner)
 
 1. Review local diff and run final local checks.
-2. Rename GitHub repository slug to `slipway`.
-3. Update README badge URLs from `pavedpath` to `slipway` after remote rename.
-4. Commit and push changes.
-5. Confirm GitHub Actions run is green on renamed repository.
-6. Make repository public and create/tag `v1.0.0`.
-
-CONDITIONALLY READY
+2. Confirm GitHub Actions run remains green on latest commits.
+3. Create/tag `v1.0.0`.

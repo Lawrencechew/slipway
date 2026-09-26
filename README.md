@@ -2,9 +2,7 @@
 
 _Git-native Golden Paths for Platform Engineering_
 
-[![CI - Public v1](https://github.com/Lawrencechew/pavedpath/actions/workflows/ci.yml/badge.svg)](https://github.com/Lawrencechew/pavedpath/actions/workflows/ci.yml)
-
-> Repository slug remains `pavedpath` in badge URLs until the owner performs the GitHub rename to `slipway`.
+[![CI - Public v1](https://github.com/Lawrencechew/slipway/actions/workflows/ci.yml/badge.svg)](https://github.com/Lawrencechew/slipway/actions/workflows/ci.yml)
 
 Slipway is a reference platform control plane that turns structured developer requests into deterministic policy decisions, governed approvals, and auditable controlled execution.
 
